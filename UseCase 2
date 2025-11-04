@@ -1,0 +1,36 @@
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+ratings = np.array([
+    [4, 0, 3, 5, 0],
+    [5, 5, 4, 0, 2],
+    [0, 3, 0, 4, 4],
+    [3, 4, 2, 0, 0]
+])
+target = 0  
+sim = cosine_similarity(ratings)
+np.fill_diagonal(sim, 0)
+pred_user_raw = sim[target].dot(ratings) / (sim[target].sum() + 1e-8)
+means = np.true_divide(ratings.sum(1), (ratings != 0).sum(1))
+means = np.nan_to_num(means)
+ratings_centered = ratings.astype(float).copy()
+for i in range(ratings.shape[0]):
+    mask = ratings[i] != 0
+    ratings_centered[i, mask] -= means[i]
+sim_centered = cosine_similarity(ratings_centered)
+np.fill_diagonal(sim_centered, 0)
+pred_user_centered = means[target] + sim_centered[target].dot(ratings_centered) / (np.abs(sim_centered[target]).sum() + 1e-8)
+item_sim = cosine_similarity(ratings.T)
+np.fill_diagonal(item_sim, 0)
+pred_item_based = ratings[target].dot(item_sim) / (np.abs(item_sim).sum(axis=1) + 1e-8)
+U, s, Vt = np.linalg.svd(np.nan_to_num(ratings), full_matrices=False)
+k = 2
+S = np.diag(s)
+rec = U[:, :k].dot(S[:k, :k]).dot(Vt[:k, :])
+pred_svd = rec[target]
+print("User-based (raw)   :", np.round(pred_user_raw, 2))
+print("User-based (mean)  :", np.round(pred_user_centered, 2))
+print("Item-based         :", np.round(pred_item_based, 2))
+print("SVD (rank=2)       :", np.round(pred_svd, 2))
+unrated = np.where(ratings[target] == 0)[0]
+recs_centered = sorted(unrated, key=lambda i: pred_user_centered[i], reverse=True)
+print("Top recommendations (mean-centered):", recs_centered[:2])
