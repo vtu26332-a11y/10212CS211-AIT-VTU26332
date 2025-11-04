@@ -1,0 +1,17 @@
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+ratings = np.array([
+    [4, 0, 3, 5, 0],
+    [5, 5, 4, 0, 2],
+    [0, 3, 0, 4, 4],
+    [3, 4, 2, 0, 0]
+])
+similarity = cosine_similarity(ratings)
+np.fill_diagonal(similarity, 0)  
+target_user = 0
+user_sim = similarity[target_user]
+predicted_ratings = ratings.T.dot(user_sim) / (np.abs(user_sim).sum() + 1e-8)
+print("Predicted ratings for User 1:", predicted_ratings.round(2))
+unrated_items = np.where(ratings[target_user] == 0)[0]
+recommendations = sorted(unrated_items, key=lambda x: predicted_ratings[x], reverse=True)
+print("Recommended item indices:", recommendations[:2])
